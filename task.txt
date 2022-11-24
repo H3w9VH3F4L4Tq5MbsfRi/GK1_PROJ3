@@ -1,0 +1,1 @@
+Algorytmy redukcji kolorów: metoda propagacji błedu, algorytm popularnościowy, K-średnich.
