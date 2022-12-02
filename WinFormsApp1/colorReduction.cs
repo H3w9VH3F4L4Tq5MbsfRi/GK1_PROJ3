@@ -10,34 +10,14 @@ namespace WinFormsApp1
 {
     public partial class form : Form
     {
-        private Bitmap original;
-        private Bitmap uncertainty;
-        private Bitmap popularity;
-        private Bitmap kmeans;
         private int maxAmmountOfColors = 3;
         private string path = string.Empty;
-        private static int precision = 12;
+        private static int precision = 24;
         public form()
         {
             InitializeComponent();
-            original = new Bitmap(originalPbox.Width, originalPbox.Height);
-            originalPbox.Image = original;
-            using (Graphics g = Graphics.FromImage(original))
-                g.Clear(Color.HotPink);
-            uncertainty = new Bitmap(uncertaintyPbox.Width, uncertaintyPbox.Height);
-            uncertaintyPbox.Image = uncertainty;
-            using (Graphics g = Graphics.FromImage(uncertainty))
-                g.Clear(Color.Pink);
-            popularity = new Bitmap(popularityPbox.Width, popularityPbox.Height);
-            popularityPbox.Image = popularity;
-            using (Graphics g = Graphics.FromImage(popularity))
-                g.Clear(Color.DeepPink);
-            kmeans = new Bitmap(kmeansPbox.Width, kmeansPbox.Height);
-            kmeansPbox.Image = kmeans;
-            using (Graphics g = Graphics.FromImage(kmeans))
-                g.Clear(Color.MediumVioletRed);
-            colorTextBox.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
-            path = System.IO.Path.GetFullPath(@"..\..\..\..\") + "lena.jpg";
+            path = System.IO.Path.GetFullPath(@"..\..\..\") + "sample pictures\\lena.jpg";
+            colorTrackBar_ValueChanged(new object(), new EventArgs());
             form_Resize(new object(), new EventArgs());
         }
         private void loadImageToolStripMenuItem_Click(object sender, EventArgs e)
@@ -65,10 +45,29 @@ namespace WinFormsApp1
                 }
             }
         }
+        private void colorTrackBar_ValueChanged(object sender, EventArgs e)
+        {
+            maxAmmountOfColors = colorTrackBar.Value;
+            colorTextBox.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
+            colorTextBox.Refresh();
+            calcAndLoadReduced();
+        }
+        private void form_Resize(object sender, EventArgs e)
+        {
+            // TRY-CATCH BECAUSE MINIMISING COUNTS AS RESIZING FOR SOME REASON
+            try
+            {
+                loadImage();
+            }
+            catch
+            {
+                return;
+            }
+            calcAndLoadReduced();
+        }
         private void loadImage()
         {
-            original = new Bitmap(Image.FromFile(path), originalPbox.Width, originalPbox.Height);
-            originalPbox.Image = original;
+            originalPbox.Image = new Bitmap(Image.FromFile(path), originalPbox.Width, originalPbox.Height);
             originalPbox.Refresh();
         }
         private void calcAndLoadReduced()
@@ -83,7 +82,7 @@ namespace WinFormsApp1
         {
             uncertaintyGbox.Text = "Propagation of uncertainty (CALCULATING)";
             uncertaintyGbox.Refresh();
-            uncertainty = new Bitmap(original);
+            Bitmap uncertainty = new Bitmap(Image.FromFile(path), uncertaintyPbox.Width, uncertaintyPbox.Height);
             uncertaintyPbox.Image = uncertainty;
 
             using (FastBitmap f = uncertainty.FastLock())
@@ -107,7 +106,6 @@ namespace WinFormsApp1
                     }
 
             uncertaintyGbox.Text = "Propagation of uncertainty";
-            uncertaintyPbox.Refresh();
             uncertaintyGbox.Refresh();
         }
         private void calcAndLoadPopularity()
@@ -115,7 +113,7 @@ namespace WinFormsApp1
             popularityGbox.Text = "Popularity algorithm (CALCULATING)";
             popularityGbox.Refresh();
             Dictionary<Color, int> colorDictionary = new Dictionary<Color, int>();
-            popularity = new Bitmap(original);
+            Bitmap popularity = new Bitmap(Image.FromFile(path), popularityPbox.Width, popularityPbox.Height);
             popularityPbox.Image = popularity;
 
             using (FastBitmap f = popularity.FastLock())
@@ -153,14 +151,13 @@ namespace WinFormsApp1
                     }
 
             popularityGbox.Text = "Popularity algorithm";
-            popularityPbox.Refresh();
             popularityGbox.Refresh();
         }
         private void calcAndLoadKmeans()
         {
             kmeansGbox.Text = "K-means algorithm (CALCULATING)";
             kmeansGbox.Refresh();
-            kmeans = new Bitmap(original);
+            Bitmap kmeans = new Bitmap(Image.FromFile(path), kmeansPbox.Width, kmeansPbox.Height);
             kmeansPbox.Image = kmeans;
 
             int k = (int)Math.Pow(maxAmmountOfColors + 1, 3);
@@ -256,7 +253,6 @@ namespace WinFormsApp1
             }
 
             kmeansGbox.Text = "K - means algorithm";
-            kmeansPbox.Refresh();
             kmeansGbox.Refresh();
         }
         private Color approximateColor(Color color)
@@ -300,34 +296,12 @@ namespace WinFormsApp1
         {
             return Color.FromArgb(originalColor.A + (int)(errorColor.Item1 * filter), originalColor.R + (int)(errorColor.Item2 * filter), originalColor.G + (int)(errorColor.Item3 * filter), originalColor.B + (int)(errorColor.Item4 * filter));
         }
-        private void form_Resize(object sender, EventArgs e)
+        private static int calcColorOffset(Color originalColor, Color currentColor)
         {
-            try
-            {
-                loadImage();
-            }
-            catch
-            {
-                return;
-            }
-            calcAndLoadReduced();
-        }
-        private int calcColorOffset(Color originalColor, Color currentColor)
-        {
-            return ownAbs(originalColor.R - currentColor.R) + ownAbs(originalColor.G - currentColor.G) + ownAbs(originalColor.B - currentColor.B);
-        }
-        private void colorTrackBar_ValueChanged(object sender, EventArgs e)
-        {
-            maxAmmountOfColors = colorTrackBar.Value;
-            colorTextBox.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
-            calcAndLoadReduced();
-        }
-        private int ownAbs(int x)
-        {
-            if (x < 0)
-                return -x;
-            else
-                return x;
+            return Math.Abs(originalColor.A - currentColor.A) +
+                   Math.Abs(originalColor.R - currentColor.R) +
+                   Math.Abs(originalColor.G - currentColor.G) +
+                   Math.Abs(originalColor.B - currentColor.B);
         }
     }
 }

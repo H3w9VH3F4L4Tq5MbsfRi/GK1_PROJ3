@@ -182,7 +182,6 @@
             this.colorTrackBar.Dock = System.Windows.Forms.DockStyle.Fill;
             this.colorTrackBar.LargeChange = 1;
             this.colorTrackBar.Location = new System.Drawing.Point(353, 489);
-            this.colorTrackBar.Maximum = 20;
             this.colorTrackBar.Minimum = 1;
             this.colorTrackBar.Name = "colorTrackBar";
             this.colorTrackBar.Size = new System.Drawing.Size(344, 45);
