@@ -14,8 +14,9 @@ namespace WinFormsApp1
         private Bitmap uncertainty;
         private Bitmap popularity;
         private Bitmap kmeans;
-        private int maxAmmountOfColors = 3;
+        private int maxAmmountOfColors = 2;
         private string path = string.Empty;
+        private static int precision = 12;
         public form()
         {
             InitializeComponent();
@@ -35,7 +36,7 @@ namespace WinFormsApp1
             kmeansPbox.Image = kmeans;
             using (Graphics g = Graphics.FromImage(kmeans))
                 g.Clear(Color.MediumVioletRed);
-            kValueToolStripMenuItem.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors, 3).ToString() + " colors.";
+            kValueToolStripMenuItem.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
             path = System.IO.Path.GetFullPath(@"..\..\..\..\") + "lena.jpg";
             form_Resize(new object(), new EventArgs());
         }
@@ -78,6 +79,8 @@ namespace WinFormsApp1
         }
         private void calcAndLoadUncertainty()
         {
+            uncertaintyGbox.Text = "Propagation of uncertainty (CALCULATING)";
+            uncertaintyGbox.Refresh();
             uncertainty = new Bitmap(original);
             uncertaintyPbox.Image = uncertainty;
 
@@ -101,10 +104,14 @@ namespace WinFormsApp1
                             f.SetPixel(i - 1, j + 1, calcErroredColor(f.GetPixel(i - 1, j + 1), errorColor, 3 / 16));
                     }
 
+            uncertaintyGbox.Text = "Propagation of uncertainty";
             uncertaintyPbox.Refresh();
+            uncertaintyGbox.Refresh();
         }
         private void calcAndLoadPopularity()
         {
+            popularityGbox.Text = "Popularity algorithm (CALCULATING)";
+            popularityGbox.Refresh();
             Dictionary<Color,int> colorDictionary = new Dictionary<Color, int>();
             popularity = new Bitmap(original);
             popularityPbox.Image = popularity;
@@ -119,7 +126,7 @@ namespace WinFormsApp1
                         else
                             colorDictionary.Add(c, 1);
                     }
-            colorDictionary = colorDictionary.OrderByDescending(x => x.Value).ToDictionary(x => x.Key, x => x.Value).Take((int)Math.Pow(maxAmmountOfColors, 3)).ToDictionary(x => x.Key, x => x.Value);
+            colorDictionary = colorDictionary.OrderByDescending(x => x.Value).ToDictionary(x => x.Key, x => x.Value).Take((int)Math.Pow(maxAmmountOfColors + 1, 3)).ToDictionary(x => x.Key, x => x.Value);
             Color[] bestColors = (new List<Color>(colorDictionary.Keys)).ToArray();
 
             using (FastBitmap f = popularity.FastLock())
@@ -143,14 +150,112 @@ namespace WinFormsApp1
                         f.SetPixel(i, j, bestColor);
                     }
 
+            popularityGbox.Text = "Popularity algorithm";
             popularityPbox.Refresh();
+            popularityGbox.Refresh();
         }
         private void calcAndLoadKmeans()
         {
-            kmeans = new Bitmap(kmeansPbox.Width, kmeansPbox.Height);
+            kmeansGbox.Text = "K-means algorithm (CALCULATING)";
+            kmeansGbox.Refresh();
+            kmeans = new Bitmap(original);
             kmeansPbox.Image = kmeans;
-            using (Graphics g = Graphics.FromImage(kmeans))
-                g.Clear(Color.MediumVioletRed);
+
+            int k = (int)Math.Pow(maxAmmountOfColors + 1, 3);
+            Random r = new Random();
+            int x = kmeans.Width;
+            int y = kmeans.Height;
+
+            using (FastBitmap f = kmeans.FastLock())
+            {
+
+                List<Color> temp = new List<Color>();
+                for (int i = 0; i < k; i++)
+                    temp.Add(f.GetPixel(r.Next(0, x), r.Next(0, y)));
+                Color[] means = temp.ToArray();
+                bool run = true;
+
+                while(run)
+                {
+                    int[] counter = new int[means.Length];
+                    (long, long, long, long)[] sum = new (long, long, long, long)[means.Length];
+
+                    for (int i = 0; i < x; i++)
+                        for (int j = 0; j < y; j++)
+                        {
+                            Color originalColor = f.GetPixel(i, j);
+                            int bestMeanIndx = -1;
+                            int lowestOffset = int.MaxValue;
+
+                            for (int l = 0; l < means.Length; l++)
+                            {
+                                int currOffset = calcColorOffset(originalColor, means[l]);
+                                if (currOffset < lowestOffset)
+                                {
+                                    lowestOffset = currOffset;
+                                    bestMeanIndx = l;
+                                }
+                            }
+
+                            counter[bestMeanIndx]++;
+                            sum[bestMeanIndx].Item1 += originalColor.A;
+                            sum[bestMeanIndx].Item2 += originalColor.R;
+                            sum[bestMeanIndx].Item3 += originalColor.G;
+                            sum[bestMeanIndx].Item4 += originalColor.B;
+                        }
+
+                    Color[] newMeans = new Color[means.Length];
+                    for (int i = 0; i < means.Length; i++)
+                    {
+                        if (counter[i] == 0)
+                        {
+                            newMeans[i] = means[i];
+                            break;
+                        }   
+                        int A = (int)(sum[i].Item1 / counter[i]);
+                        int R = (int)(sum[i].Item2 / counter[i]);
+                        int G = (int)(sum[i].Item3 / counter[i]);
+                        int B = (int)(sum[i].Item4 / counter[i]);
+                        newMeans[i] = Color.FromArgb(A, R, G, B);
+                    }
+
+                    int maxDiff = int.MinValue;
+                    for (int i = 0; i < means.Length; i++)
+                    {
+                        int currDiff = calcColorOffset(means[i], newMeans[i]);
+                        if (currDiff > maxDiff)
+                            maxDiff = currDiff;
+                    }
+                    means = newMeans;
+                    //Debug.WriteLine(maxDiff);
+                    if (maxDiff <= precision)
+                        run = false;
+                }
+
+                for (int i = 0; i < x; i++)
+                    for (int j = 0; j < y; j++)
+                    {
+                        Color originalColor = f.GetPixel(i, j);
+                        int bestMeanIndx = -1;
+                        int lowestOffset = int.MaxValue;
+
+                        for (int l = 0; l < means.Length; l++)
+                        {
+                            int currOffset = calcColorOffset(originalColor, means[l]);
+                            if (currOffset < lowestOffset)
+                            {
+                                lowestOffset = currOffset;
+                                bestMeanIndx = l;
+                            }
+                        }
+
+                        f.SetPixel(i, j, means[bestMeanIndx]);
+                    }
+            }
+
+            kmeansGbox.Text = "K - means algorithm";
+            kmeansPbox.Refresh();
+            kmeansGbox.Refresh();
         }
         private Color approximateColor(Color color)
         {
@@ -226,7 +331,7 @@ namespace WinFormsApp1
             if (newK > 0 && newK < 256)
             {
                 maxAmmountOfColors = newK;
-                kValueToolStripMenuItem.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors, 3).ToString() + " colors.";
+                kValueToolStripMenuItem.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
                 loadImage();
                 calcAndLoadReduced();
             }
