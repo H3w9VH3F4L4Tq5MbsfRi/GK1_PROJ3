@@ -14,7 +14,7 @@ namespace WinFormsApp1
         private Bitmap uncertainty;
         private Bitmap popularity;
         private Bitmap kmeans;
-        private int maxAmmountOfColors = 2;
+        private int maxAmmountOfColors = 3;
         private string path = string.Empty;
         private static int precision = 12;
         public form()
@@ -36,7 +36,7 @@ namespace WinFormsApp1
             kmeansPbox.Image = kmeans;
             using (Graphics g = Graphics.FromImage(kmeans))
                 g.Clear(Color.MediumVioletRed);
-            kValueToolStripMenuItem.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
+            colorTextBox.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
             path = System.IO.Path.GetFullPath(@"..\..\..\..\") + "lena.jpg";
             form_Resize(new object(), new EventArgs());
         }
@@ -73,9 +73,11 @@ namespace WinFormsApp1
         }
         private void calcAndLoadReduced()
         {
+            this.Cursor = Cursors.WaitCursor;
             calcAndLoadUncertainty();
             calcAndLoadPopularity();
             calcAndLoadKmeans();
+            this.Cursor = Cursors.Default;
         }
         private void calcAndLoadUncertainty()
         {
@@ -84,14 +86,14 @@ namespace WinFormsApp1
             uncertainty = new Bitmap(original);
             uncertaintyPbox.Image = uncertainty;
 
-            using(FastBitmap f = uncertainty.FastLock())
-                for (int i = 0; i < f.Width;i++)
+            using (FastBitmap f = uncertainty.FastLock())
+                for (int i = 0; i < f.Width; i++)
                     for (int j = 0; j < f.Height; j++)
                     {
                         Color originalColor = f.GetPixel(i, j);
                         Color approxedColor = approximateColor(originalColor);
                         f.SetPixel(i, j, approxedColor);
-                        (int,int,int,int) errorColor = calcColorError(originalColor, approxedColor);
+                        (int, int, int, int) errorColor = calcColorError(originalColor, approxedColor);
 
                         // Floyd–Steinberg dithering
                         if (i + 1 < f.Width && j + 1 < f.Height)
@@ -112,7 +114,7 @@ namespace WinFormsApp1
         {
             popularityGbox.Text = "Popularity algorithm (CALCULATING)";
             popularityGbox.Refresh();
-            Dictionary<Color,int> colorDictionary = new Dictionary<Color, int>();
+            Dictionary<Color, int> colorDictionary = new Dictionary<Color, int>();
             popularity = new Bitmap(original);
             popularityPbox.Image = popularity;
 
@@ -175,7 +177,7 @@ namespace WinFormsApp1
                 Color[] means = temp.ToArray();
                 bool run = true;
 
-                while(run)
+                while (run)
                 {
                     int[] counter = new int[means.Length];
                     (long, long, long, long)[] sum = new (long, long, long, long)[means.Length];
@@ -211,7 +213,7 @@ namespace WinFormsApp1
                         {
                             newMeans[i] = means[i];
                             break;
-                        }   
+                        }
                         int A = (int)(sum[i].Item1 / counter[i]);
                         int R = (int)(sum[i].Item2 / counter[i]);
                         int G = (int)(sum[i].Item3 / counter[i]);
@@ -269,7 +271,7 @@ namespace WinFormsApp1
             int bestBchannelValue = -1;
 
 
-            for (int i = 0; i < 256; i+=step)
+            for (int i = 0; i < 256; i += step)
             {
                 if (minRchannelError > Math.Abs(color.R - i))
                 {
@@ -290,11 +292,11 @@ namespace WinFormsApp1
 
             return Color.FromArgb(color.A, bestRchannelValue, bestGchannelValue, bestBchannelValue);
         }
-        private (int,int,int,int) calcColorError(Color originalColor, Color approxedColor)
+        private (int, int, int, int) calcColorError(Color originalColor, Color approxedColor)
         {
             return (originalColor.A - approxedColor.A, originalColor.R - approxedColor.R, originalColor.G - approxedColor.G, originalColor.B - approxedColor.B);
         }
-        private Color calcErroredColor(Color originalColor, (int,int,int,int) errorColor, double filter)
+        private Color calcErroredColor(Color originalColor, (int, int, int, int) errorColor, double filter)
         {
             return Color.FromArgb(originalColor.A + (int)(errorColor.Item1 * filter), originalColor.R + (int)(errorColor.Item2 * filter), originalColor.G + (int)(errorColor.Item3 * filter), originalColor.B + (int)(errorColor.Item4 * filter));
         }
@@ -312,31 +314,20 @@ namespace WinFormsApp1
         }
         private int calcColorOffset(Color originalColor, Color currentColor)
         {
-            return Math.Abs(originalColor.R - currentColor.R) + Math.Abs(originalColor.G - currentColor.G) + Math.Abs(originalColor.B - currentColor.B);
+            return ownAbs(originalColor.R - currentColor.R) + ownAbs(originalColor.G - currentColor.G) + ownAbs(originalColor.B - currentColor.B);
         }
-        private void kValueToolStripMenuItem_Click(object sender, EventArgs e)
+        private void colorTrackBar_ValueChanged(object sender, EventArgs e)
         {
-            string output = Microsoft.VisualBasic.Interaction.InputBox("Choose k value.", string.Empty, maxAmmountOfColors.ToString());
-            int newK = -1;
-            try
-            {
-                newK = int.Parse(output);
-            }
-            catch
-            {
-                MessageBox.Show("Unable to parse entered value to integer.", "Wrong input value", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            
-            if (newK > 0 && newK < 256)
-            {
-                maxAmmountOfColors = newK;
-                kValueToolStripMenuItem.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
-                loadImage();
-                calcAndLoadReduced();
-            }
+            maxAmmountOfColors = colorTrackBar.Value;
+            colorTextBox.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
+            calcAndLoadReduced();
+        }
+        private int ownAbs(int x)
+        {
+            if (x < 0)
+                return -x;
             else
-                MessageBox.Show("The k value must be an integer between 0 and 256.", "Wrong input value", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return x;
         }
     }
 }
