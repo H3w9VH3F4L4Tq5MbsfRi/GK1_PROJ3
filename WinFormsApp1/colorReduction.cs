@@ -16,10 +16,11 @@ namespace WinFormsApp1
         public form()
         {
             InitializeComponent();
-            path = System.IO.Path.GetFullPath(@"..\..\..\") + "sample pictures\\lena.jpg";
+            loadDefault("lena.jpg");
             colorTrackBar_ValueChanged(new object(), new EventArgs());
             form_Resize(new object(), new EventArgs());
         }
+        //EVENT HANDLERS
         private void loadImageToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using (var dialog = new OpenFileDialog())
@@ -48,7 +49,7 @@ namespace WinFormsApp1
         private void colorTrackBar_ValueChanged(object sender, EventArgs e)
         {
             maxAmmountOfColors = colorTrackBar.Value;
-            colorTextBox.Text = "Pallet limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
+            colorTextBox.Text = "Color palette limited to " + Math.Pow(maxAmmountOfColors + 1, 3).ToString() + " colors.";
             colorTextBox.Refresh();
             calcAndLoadReduced();
         }
@@ -65,6 +66,31 @@ namespace WinFormsApp1
             }
             calcAndLoadReduced();
         }
+        private void lenaToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            loadDefault("lena.jpg");
+        }
+        private void lenagrayscaleToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            loadDefault("lena_grayscale.jpg");
+        }
+        private void beachToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            loadDefault("beach.jpg");
+        }
+        private void colorsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            loadDefault("colors.jpg");
+        }
+        private void lasVegasToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            loadDefault("lasvegas.jpg");
+        }
+        private void lewandowskiToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            loadDefault("lewandowski.jpg");
+        }
+        //OWN FUNCTIONS
         private void loadImage()
         {
             originalPbox.Image = new Bitmap(Image.FromFile(path), originalPbox.Width, originalPbox.Height);
@@ -303,5 +329,11 @@ namespace WinFormsApp1
                    Math.Abs(originalColor.G - currentColor.G) +
                    Math.Abs(originalColor.B - currentColor.B);
         }
+        private void loadDefault(string a)
+        {
+            path = System.IO.Path.GetFullPath(@"..\..\..\") + "sample pictures\\" + a;
+            form_Resize(new object(), new EventArgs());
+        }
+
     }
 }
