@@ -49,6 +49,11 @@
             this.colorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.lasVegasToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.lewandowskiToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.chooseFilterMatrixToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.floydSteinbergsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.burkessToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stuckysToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.changeΕValueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel.SuspendLayout();
             this.originalImageGbox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.originalPbox)).BeginInit();
@@ -102,7 +107,7 @@
             // 
             // originalPbox
             // 
-            this.originalPbox.BackColor = System.Drawing.Color.Red;
+            this.originalPbox.BackColor = System.Drawing.SystemColors.Control;
             this.originalPbox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.originalPbox.Location = new System.Drawing.Point(3, 18);
             this.originalPbox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -127,7 +132,7 @@
             // 
             // uncertaintyPbox
             // 
-            this.uncertaintyPbox.BackColor = System.Drawing.Color.Lime;
+            this.uncertaintyPbox.BackColor = System.Drawing.SystemColors.Control;
             this.uncertaintyPbox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.uncertaintyPbox.Location = new System.Drawing.Point(3, 18);
             this.uncertaintyPbox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -151,7 +156,7 @@
             // 
             // popularityPbox
             // 
-            this.popularityPbox.BackColor = System.Drawing.Color.Yellow;
+            this.popularityPbox.BackColor = System.Drawing.SystemColors.Control;
             this.popularityPbox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.popularityPbox.Location = new System.Drawing.Point(3, 18);
             this.popularityPbox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -175,7 +180,7 @@
             // 
             // kmeansPbox
             // 
-            this.kmeansPbox.BackColor = System.Drawing.Color.Cyan;
+            this.kmeansPbox.BackColor = System.Drawing.SystemColors.Control;
             this.kmeansPbox.Dock = System.Windows.Forms.DockStyle.Fill;
             this.kmeansPbox.Location = new System.Drawing.Point(3, 18);
             this.kmeansPbox.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
@@ -217,7 +222,9 @@
             this.menuStrip.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadImageToolStripMenuItem,
-            this.loadDefaultToolStripMenuItem});
+            this.loadDefaultToolStripMenuItem,
+            this.chooseFilterMatrixToolStripMenuItem,
+            this.changeΕValueToolStripMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Padding = new System.Windows.Forms.Padding(5, 2, 0, 2);
@@ -287,6 +294,46 @@
             this.lewandowskiToolStripMenuItem.Text = "Lewandowski 🇵🇱";
             this.lewandowskiToolStripMenuItem.Click += new System.EventHandler(this.lewandowskiToolStripMenuItem_Click);
             // 
+            // chooseFilterMatrixToolStripMenuItem
+            // 
+            this.chooseFilterMatrixToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.floydSteinbergsToolStripMenuItem,
+            this.burkessToolStripMenuItem,
+            this.stuckysToolStripMenuItem});
+            this.chooseFilterMatrixToolStripMenuItem.Name = "chooseFilterMatrixToolStripMenuItem";
+            this.chooseFilterMatrixToolStripMenuItem.Size = new System.Drawing.Size(186, 20);
+            this.chooseFilterMatrixToolStripMenuItem.Text = "Choose uncertainty filter matrix";
+            // 
+            // floydSteinbergsToolStripMenuItem
+            // 
+            this.floydSteinbergsToolStripMenuItem.Checked = true;
+            this.floydSteinbergsToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.floydSteinbergsToolStripMenuItem.Name = "floydSteinbergsToolStripMenuItem";
+            this.floydSteinbergsToolStripMenuItem.Size = new System.Drawing.Size(166, 22);
+            this.floydSteinbergsToolStripMenuItem.Text = "Floyd-Steinberg\'s";
+            this.floydSteinbergsToolStripMenuItem.Click += new System.EventHandler(this.floydSteinbergsToolStripMenuItem_Click);
+            // 
+            // burkessToolStripMenuItem
+            // 
+            this.burkessToolStripMenuItem.Name = "burkessToolStripMenuItem";
+            this.burkessToolStripMenuItem.Size = new System.Drawing.Size(166, 22);
+            this.burkessToolStripMenuItem.Text = "Burkes\'s";
+            this.burkessToolStripMenuItem.Click += new System.EventHandler(this.burkessToolStripMenuItem_Click);
+            // 
+            // stuckysToolStripMenuItem
+            // 
+            this.stuckysToolStripMenuItem.Name = "stuckysToolStripMenuItem";
+            this.stuckysToolStripMenuItem.Size = new System.Drawing.Size(166, 22);
+            this.stuckysToolStripMenuItem.Text = "Stucky\'s";
+            this.stuckysToolStripMenuItem.Click += new System.EventHandler(this.stuckysToolStripMenuItem_Click);
+            // 
+            // changeΕValueToolStripMenuItem
+            // 
+            this.changeΕValueToolStripMenuItem.Name = "changeΕValueToolStripMenuItem";
+            this.changeΕValueToolStripMenuItem.Size = new System.Drawing.Size(144, 20);
+            this.changeΕValueToolStripMenuItem.Text = "Change K-mean ε value";
+            this.changeΕValueToolStripMenuItem.Click += new System.EventHandler(this.changeΕValueToolStripMenuItem_Click);
+            // 
             // form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -297,7 +344,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip;
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
-            this.MinimumSize = new System.Drawing.Size(500, 500);
+            this.MinimumSize = new System.Drawing.Size(700, 600);
             this.Name = "form";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Color reduction";
@@ -342,5 +389,10 @@
         private ToolStripMenuItem colorsToolStripMenuItem;
         private ToolStripMenuItem lasVegasToolStripMenuItem;
         private ToolStripMenuItem lewandowskiToolStripMenuItem;
+        private ToolStripMenuItem chooseFilterMatrixToolStripMenuItem;
+        private ToolStripMenuItem floydSteinbergsToolStripMenuItem;
+        private ToolStripMenuItem burkessToolStripMenuItem;
+        private ToolStripMenuItem stuckysToolStripMenuItem;
+        private ToolStripMenuItem changeΕValueToolStripMenuItem;
     }
 }

@@ -1,4 +1,4 @@
-using FastBitmapLib;
+﻿using FastBitmapLib;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -12,7 +12,7 @@ namespace WinFormsApp1
     {
         private int maxAmmountOfColors = 3;
         private string path = string.Empty;
-        private static int precision = 24;
+        private int epsilon = 24;
         public form()
         {
             InitializeComponent();
@@ -90,6 +90,59 @@ namespace WinFormsApp1
         {
             loadDefault("lewandowski.jpg");
         }
+        private void floydSteinbergsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (floydSteinbergsToolStripMenuItem.Checked)
+                return;
+            floydSteinbergsToolStripMenuItem.Checked = true;
+            burkessToolStripMenuItem.Checked = false;
+            stuckysToolStripMenuItem.Checked = false;
+            this.Cursor = Cursors.WaitCursor;
+            calcAndLoadUncertainty();
+            this.Cursor = Cursors.Default;
+        }
+        private void burkessToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (burkessToolStripMenuItem.Checked)
+                return;
+            burkessToolStripMenuItem.Checked = true;
+            floydSteinbergsToolStripMenuItem.Checked = false;
+            stuckysToolStripMenuItem.Checked = false;
+            this.Cursor = Cursors.WaitCursor;
+            calcAndLoadUncertainty();
+            this.Cursor = Cursors.Default;
+        }
+        private void stuckysToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (stuckysToolStripMenuItem.Checked)
+                return;
+            stuckysToolStripMenuItem.Checked = true;
+            floydSteinbergsToolStripMenuItem.Checked = false;
+            burkessToolStripMenuItem.Checked = false;
+            this.Cursor = Cursors.WaitCursor;
+            calcAndLoadUncertainty();
+            this.Cursor = Cursors.Default;
+        }
+        private void changeΕValueToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string capture = Microsoft.VisualBasic.Interaction.InputBox("Enter desired ε value: ", "Change K-mean ε value", epsilon.ToString());
+            int newEpsilon = -1;
+            try
+            {
+                newEpsilon = int.Parse(capture);
+            }
+            catch
+            {
+                return;
+            }
+            if (newEpsilon >= 0)
+            {
+                epsilon = newEpsilon;
+                this.Cursor = Cursors.WaitCursor;
+                calcAndLoadKmeans();
+                this.Cursor = Cursors.Default;
+            }
+        }
         //OWN FUNCTIONS
         private void loadImage()
         {
@@ -118,17 +171,14 @@ namespace WinFormsApp1
                         Color originalColor = f.GetPixel(i, j);
                         Color approxedColor = approximateColor(originalColor);
                         f.SetPixel(i, j, approxedColor);
-                        (int, int, int, int) errorColor = calcColorError(originalColor, approxedColor);
+                        Vector4 errorColor = calcColorError(originalColor, approxedColor);
 
-                        // Floyd�Steinberg dithering
-                        if (i + 1 < f.Width && j + 1 < f.Height)
-                            f.SetPixel(i + 1, j + 1, calcErroredColor(f.GetPixel(i + 1, j + 1), errorColor, 1 / 16));
-                        if (i + 1 < f.Width)
-                            f.SetPixel(i + 1, j, calcErroredColor(f.GetPixel(i + 1, j), errorColor, 7 / 16));
-                        if (j + 1 < f.Height)
-                            f.SetPixel(i, j + 1, calcErroredColor(f.GetPixel(i, j + 1), errorColor, 5 / 16));
-                        if (i - 1 >= 0 && j + 1 < f.Height)
-                            f.SetPixel(i - 1, j + 1, calcErroredColor(f.GetPixel(i - 1, j + 1), errorColor, 3 / 16));
+                        if (floydSteinbergsToolStripMenuItem.Checked)
+                            floydSteinbergsDithering(f, i, j, errorColor);
+                        else if (burkessToolStripMenuItem.Checked)
+                            burkessDithering(f, i, j, errorColor);
+                        else
+                            stuckysDithering(f, i, j, errorColor);
                     }
 
             uncertaintyGbox.Text = "Propagation of uncertainty";
@@ -253,7 +303,7 @@ namespace WinFormsApp1
                     }
                     means = newMeans;
                     //Debug.WriteLine(maxDiff);
-                    if (maxDiff <= precision)
+                    if (maxDiff <= epsilon)
                         run = false;
                 }
 
@@ -278,7 +328,7 @@ namespace WinFormsApp1
                     }
             }
 
-            kmeansGbox.Text = "K - means algorithm";
+            kmeansGbox.Text = "K-means algorithm";
             kmeansGbox.Refresh();
         }
         private Color approximateColor(Color color)
@@ -314,13 +364,13 @@ namespace WinFormsApp1
 
             return Color.FromArgb(color.A, bestRchannelValue, bestGchannelValue, bestBchannelValue);
         }
-        private (int, int, int, int) calcColorError(Color originalColor, Color approxedColor)
+        private Vector4 calcColorError(Color originalColor, Color approxedColor)
         {
-            return (originalColor.A - approxedColor.A, originalColor.R - approxedColor.R, originalColor.G - approxedColor.G, originalColor.B - approxedColor.B);
+            return new Vector4(originalColor.A - approxedColor.A, originalColor.R - approxedColor.R, originalColor.G - approxedColor.G, originalColor.B - approxedColor.B);
         }
-        private Color calcErroredColor(Color originalColor, (int, int, int, int) errorColor, double filter)
+        private Color calcErroredColor(Color originalColor, Vector4 errorColor, double filter)
         {
-            return Color.FromArgb(originalColor.A + (int)(errorColor.Item1 * filter), originalColor.R + (int)(errorColor.Item2 * filter), originalColor.G + (int)(errorColor.Item3 * filter), originalColor.B + (int)(errorColor.Item4 * filter));
+            return Color.FromArgb(originalColor.A + (int)(errorColor.X * filter), originalColor.R + (int)(errorColor.Y * filter), originalColor.G + (int)(errorColor.Z * filter), originalColor.B + (int)(errorColor.W * filter));
         }
         private static int calcColorOffset(Color originalColor, Color currentColor)
         {
@@ -334,6 +384,60 @@ namespace WinFormsApp1
             path = System.IO.Path.GetFullPath(@"..\..\..\") + "sample pictures\\" + a;
             form_Resize(new object(), new EventArgs());
         }
-
+        private void floydSteinbergsDithering(FastBitmap f, int i, int j, Vector4 errorColor)
+        {
+            if (i + 1 < f.Width && j + 1 < f.Height)
+                f.SetPixel(i + 1, j + 1, calcErroredColor(f.GetPixel(i + 1, j + 1), errorColor, 1 / 16));
+            if (i + 1 < f.Width)
+                f.SetPixel(i + 1, j, calcErroredColor(f.GetPixel(i + 1, j), errorColor, 7 / 16));
+            if (j + 1 < f.Height)
+                f.SetPixel(i, j + 1, calcErroredColor(f.GetPixel(i, j + 1), errorColor, 5 / 16));
+            if (i - 1 >= 0 && j + 1 < f.Height)
+                f.SetPixel(i - 1, j + 1, calcErroredColor(f.GetPixel(i - 1, j + 1), errorColor, 3 / 16));
+        }
+        private void burkessDithering(FastBitmap f, int i, int j, Vector4 errorColor)
+        {
+            if (i + 1 < f.Width && j + 1 < f.Height)
+                f.SetPixel(i + 1, j + 1, calcErroredColor(f.GetPixel(i + 1, j + 1), errorColor, 4 / 32));
+            if (i + 2 < f.Width && j + 1 < f.Height)
+                f.SetPixel(i + 2, j + 1, calcErroredColor(f.GetPixel(i + 2, j + 1), errorColor, 2 / 32));
+            if (i + 1 < f.Width)
+                f.SetPixel(i + 1, j, calcErroredColor(f.GetPixel(i + 1, j), errorColor, 8 / 32));
+            if (i + 2 < f.Width)
+                f.SetPixel(i + 2, j, calcErroredColor(f.GetPixel(i + 2, j), errorColor, 4 / 32));
+            if (j + 1 < f.Height)
+                f.SetPixel(i, j + 1, calcErroredColor(f.GetPixel(i, j + 1), errorColor, 8 / 32));
+            if (i - 1 >= 0 && j + 1 < f.Height)
+                f.SetPixel(i - 1, j + 1, calcErroredColor(f.GetPixel(i - 1, j + 1), errorColor, 4 / 32));
+            if (i - 2 >= 0 && j + 1 < f.Height)
+                f.SetPixel(i - 2, j + 1, calcErroredColor(f.GetPixel(i - 2, j + 1), errorColor, 2 / 32));
+        }
+        private void stuckysDithering(FastBitmap f, int i, int j, Vector4 errorColor)
+        {
+            if (i + 1 < f.Width && j + 1 < f.Height)
+                f.SetPixel(i + 1, j + 1, calcErroredColor(f.GetPixel(i + 1, j + 1), errorColor, 4 / 42));
+            if (i + 2 < f.Width && j + 1 < f.Height)
+                f.SetPixel(i + 2, j + 1, calcErroredColor(f.GetPixel(i + 2, j + 1), errorColor, 2 / 42));
+            if (i + 1 < f.Width)
+                f.SetPixel(i + 1, j, calcErroredColor(f.GetPixel(i + 1, j), errorColor, 8 / 42));
+            if (i + 2 < f.Width)
+                f.SetPixel(i + 2, j, calcErroredColor(f.GetPixel(i + 2, j), errorColor, 4 / 42));
+            if (j + 1 < f.Height)
+                f.SetPixel(i, j + 1, calcErroredColor(f.GetPixel(i, j + 1), errorColor, 8 / 42));
+            if (i - 1 >= 0 && j + 1 < f.Height)
+                f.SetPixel(i - 1, j + 1, calcErroredColor(f.GetPixel(i - 1, j + 1), errorColor, 4 / 42));
+            if (i - 2 >= 0 && j + 1 < f.Height)
+                f.SetPixel(i - 2, j + 1, calcErroredColor(f.GetPixel(i - 2, j + 1), errorColor, 2 / 42));
+            if (i - 2 >= 0 && j + 2 < f.Height)
+                f.SetPixel(i - 2, j + 2, calcErroredColor(f.GetPixel(i - 2, j + 2), errorColor, 1 / 42));
+            if (i - 1 >= 0 && j + 2 < f.Height)
+                f.SetPixel(i - 1, j + 2, calcErroredColor(f.GetPixel(i - 1, j + 2), errorColor, 2 / 42));
+            if (j + 2 < f.Height)
+                f.SetPixel(i, j + 2, calcErroredColor(f.GetPixel(i, j + 2), errorColor, 4 / 42));
+            if (i + 1 < f.Width && j + 2 < f.Height)
+                f.SetPixel(i + 1, j + 2, calcErroredColor(f.GetPixel(i + 1, j + 2), errorColor, 2 / 42));
+            if (i + 2 < f.Width && j + 2 < f.Height)
+                f.SetPixel(i + 2, j + 2, calcErroredColor(f.GetPixel(i + 2, j + 2), errorColor, 1 / 42));
+        }
     }
 }
