@@ -12,7 +12,10 @@ namespace WinFormsApp1
     {
         private int maxAmmountOfColors = 3;
         private string path = string.Empty;
-        private int epsilon = 24;
+        private int epsilon = 1000;
+        private static int border = 10;
+        private static int miniBorder = 2;
+        private bool hsv = false;
         public form()
         {
             InitializeComponent();
@@ -43,6 +46,7 @@ namespace WinFormsApp1
                         return;
                     }
                     calcAndLoadReduced();
+                    hsv = false;
                 }
             }
         }
@@ -58,7 +62,10 @@ namespace WinFormsApp1
             // TRY-CATCH BECAUSE MINIMISING COUNTS AS RESIZING FOR SOME REASON
             try
             {
-                loadImage();
+                if (hsv)
+                    generateHSV();
+                else
+                    loadImage();
             }
             catch
             {
@@ -68,26 +75,32 @@ namespace WinFormsApp1
         }
         private void lenaToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            hsv = false;
             loadDefault("lena.jpg");
         }
         private void lenagrayscaleToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            hsv = false;
             loadDefault("lena_grayscale.jpg");
         }
         private void beachToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            hsv = false;
             loadDefault("beach.jpg");
         }
         private void colorsToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            hsv = false;
             loadDefault("colors.jpg");
         }
         private void lasVegasToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            hsv = false;
             loadDefault("lasvegas.jpg");
         }
         private void lewandowskiToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            hsv = false;
             loadDefault("lewandowski.jpg");
         }
         private void floydSteinbergsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -143,6 +156,15 @@ namespace WinFormsApp1
                 this.Cursor = Cursors.Default;
             }
         }
+        private void generateButton_Click(object sender, EventArgs e)
+        {
+            hsv = true;
+            generateHSV();
+        }
+        private void vTrackBar_ValueChanged(object sender, EventArgs e)
+        {
+            generateHSV();
+        }
         //OWN FUNCTIONS
         private void loadImage()
         {
@@ -161,7 +183,7 @@ namespace WinFormsApp1
         {
             uncertaintyGbox.Text = "Propagation of uncertainty (CALCULATING)";
             uncertaintyGbox.Refresh();
-            Bitmap uncertainty = new Bitmap(Image.FromFile(path), uncertaintyPbox.Width, uncertaintyPbox.Height);
+            Bitmap uncertainty = new Bitmap(originalPbox.Image);
             uncertaintyPbox.Image = uncertainty;
 
             using (FastBitmap f = uncertainty.FastLock())
@@ -189,7 +211,7 @@ namespace WinFormsApp1
             popularityGbox.Text = "Popularity algorithm (CALCULATING)";
             popularityGbox.Refresh();
             Dictionary<Color, int> colorDictionary = new Dictionary<Color, int>();
-            Bitmap popularity = new Bitmap(Image.FromFile(path), popularityPbox.Width, popularityPbox.Height);
+            Bitmap popularity = new Bitmap(originalPbox.Image);
             popularityPbox.Image = popularity;
 
             using (FastBitmap f = popularity.FastLock())
@@ -233,7 +255,7 @@ namespace WinFormsApp1
         {
             kmeansGbox.Text = "K-means algorithm (CALCULATING)";
             kmeansGbox.Refresh();
-            Bitmap kmeans = new Bitmap(Image.FromFile(path), kmeansPbox.Width, kmeansPbox.Height);
+            Bitmap kmeans = new Bitmap(originalPbox.Image);
             kmeansPbox.Image = kmeans;
 
             int k = (int)Math.Pow(maxAmmountOfColors + 1, 3);
@@ -243,17 +265,23 @@ namespace WinFormsApp1
 
             using (FastBitmap f = kmeans.FastLock())
             {
-
                 List<Color> temp = new List<Color>();
+                List<(int x, int y)> temp2 = new List<(int x, int y)>();
                 for (int i = 0; i < k; i++)
-                    temp.Add(f.GetPixel(r.Next(0, x), r.Next(0, y)));
+                {
+                    int x1 = r.Next(0, x);
+                    int y1 = r.Next(0, y);
+                    temp.Add(f.GetPixel(x1, y1));
+                    temp2.Add((x1,y1));
+                }
                 Color[] means = temp.ToArray();
+                (int x, int y)[] meansCoords = temp2.ToArray();
                 bool run = true;
 
                 while (run)
                 {
-                    int[] counter = new int[means.Length];
-                    (long, long, long, long)[] sum = new (long, long, long, long)[means.Length];
+                    (double x, double y)[] coorsd = new (double, double)[means.Length];
+                    double[] weights = new double[means.Length];
 
                     for (int i = 0; i < x; i++)
                         for (int j = 0; j < y; j++)
@@ -272,26 +300,23 @@ namespace WinFormsApp1
                                 }
                             }
 
-                            counter[bestMeanIndx]++;
-                            sum[bestMeanIndx].Item1 += originalColor.A;
-                            sum[bestMeanIndx].Item2 += originalColor.R;
-                            sum[bestMeanIndx].Item3 += originalColor.G;
-                            sum[bestMeanIndx].Item4 += originalColor.B;
+                            double w = calcDistance(i, j, meansCoords[bestMeanIndx].x, meansCoords[bestMeanIndx].y);
+                            weights[bestMeanIndx] += w;
+                            coorsd[bestMeanIndx].x += i * w;
+                            coorsd[bestMeanIndx].y += j * w;
                         }
 
                     Color[] newMeans = new Color[means.Length];
                     for (int i = 0; i < means.Length; i++)
                     {
-                        if (counter[i] == 0)
+                        if (weights[i] == 0)
                         {
                             newMeans[i] = means[i];
                             break;
                         }
-                        int A = (int)(sum[i].Item1 / counter[i]);
-                        int R = (int)(sum[i].Item2 / counter[i]);
-                        int G = (int)(sum[i].Item3 / counter[i]);
-                        int B = (int)(sum[i].Item4 / counter[i]);
-                        newMeans[i] = Color.FromArgb(A, R, G, B);
+                        coorsd[i].x /= weights[i];
+                        coorsd[i].y /= weights[i];
+                        newMeans[i] = f.GetPixel((int)coorsd[i].x, (int)coorsd[i].y);
                     }
 
                     int maxDiff = int.MinValue;
@@ -438,6 +463,72 @@ namespace WinFormsApp1
                 f.SetPixel(i + 1, j + 2, calcErroredColor(f.GetPixel(i + 1, j + 2), errorColor, 2 / 42));
             if (i + 2 < f.Width && j + 2 < f.Height)
                 f.SetPixel(i + 2, j + 2, calcErroredColor(f.GetPixel(i + 2, j + 2), errorColor, 1 / 42));
+        }
+        private double calcDistance(int x1, int y1, int x2, int y2)
+        {
+            return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+        }
+        private void generateHSV()
+        {
+            Bitmap b = new Bitmap(originalPbox.Width, originalPbox.Height);
+            using (Graphics g = Graphics.FromImage(b))
+            {
+                g.FillRectangle(Brushes.Black, 0, 0, originalPbox.Width, originalPbox.Height);
+                g.FillRectangle(Brushes.White, border, border, originalPbox.Width - 2 * border, originalPbox.Height - 2 * border);
+            }
+
+            int start = border + miniBorder;
+            int width = (int)((double)(originalPbox.Width - 2 * border - 11 * miniBorder) / 10);
+            int height = originalPbox.Height - 2 * border - 2 * miniBorder;
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (FastBitmap f = b.FastLock())
+                    generateHSVrectangle(f, start, border + miniBorder, width, height, i * 36);
+                //g.FillRectangle(Brushes.HotPink, start, border + miniBorder, width, height);
+                start += width;
+                start += miniBorder;
+            }
+
+            originalPbox.Image = b;
+            originalPbox.Refresh();
+            calcAndLoadReduced();
+        }
+        private void generateHSVrectangle(FastBitmap f, int startX, int startY, int width, int height, double hue)
+        {
+            for (int i = 0; i < height; i++)
+            {
+                double s = (double)(height - i) / height;
+                double v = (double)vTrackBar.Value / 1000;
+                Color c = ColorFromHSV(hue, s, v);
+
+                for (int j = 0; j < width; j++)
+                {
+                    f.SetPixel(j+startX,i+startY,c);
+                }
+            }
+        }
+        private static Color ColorFromHSV(double hue, double saturation, double value)
+        {
+            double f = hue / 60 - Math.Floor(hue / 60);
+            int swtch = (int)(Math.Floor(hue / 60)) % 6;
+            int a = (int)(value * 255);
+            int b = (int)(value * 255 * (1 - saturation));
+            int c = (int)(value * 255 * (1 - f * saturation));
+            int d = (int)(value * 255 * (1 - (1 - f) * saturation));
+
+            if (swtch == 0)
+                return Color.FromArgb(255, a, d, b);
+            else if (swtch == 1)
+                return Color.FromArgb(255, c, a, b);
+            else if (swtch == 2)
+                return Color.FromArgb(255, b, a, d);
+            else if (swtch == 3)
+                return Color.FromArgb(255, b, c, a);
+            else if (swtch == 4)
+                return Color.FromArgb(255, d, b, a);
+            else
+                return Color.FromArgb(255, a, b, c);
         }
     }
 }
